@@ -4,11 +4,10 @@
 #include <iphlpapi.h>
 #include <ws2tcpip.h>
 
-#pragma comment(lib, "iphlpapi.lib")
-
 #define MAC_ADDRESS_LENGTH 6
 #define MAX_COMMAND_LENGTH 100
 #define HARD_CODED_ADDRESS "192.168.30.43"
+#define THREAD_WORKERS 255
 
 typedef struct {
     IPAddr target;
@@ -17,19 +16,15 @@ typedef struct {
 
 //Arp Sweep Thread
 DWORD WINAPI ArpSweepThread(LPVOID param) {
-    unsigned int value = 1;
+    unsigned int value = 0;
 
     BYTE mac_addr[6];
-    char ipStr[INET_ADDRSTRLEN];
     ULONG length = MAC_ADDRESS_LENGTH;
     THREAD_DATA *data = (THREAD_DATA *)param;
+
     int res = SendARP(data->target, data->src, (PULONG) mac_addr, &length);
 
-    if (res == NO_ERROR) {
-        value = value ^ value;
-        inet_ntop(AF_INET, &data->target, ipStr, INET_ADDRSTRLEN);
-        printf("[+] Host trovato : %s\n", ipStr);
-    }
+    if (res == NO_ERROR) value = data->target;
 
     free(data);
     return value;
@@ -37,38 +32,37 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
 
 
 void ARP_sweep(const char *srcIP) {
-    IPAddr *src;
-    IPAddr *start_ip;
-    THREAD_DATA *thread_data = malloc(sizeof(THREAD_DATA));
+    IPAddr src;
+    IPAddr start_ip;
+    HANDLE t[THREAD_WORKERS];
+    char ipStr[INET_ADDRSTRLEN]; 
+    long unsigned int exit;
 
-    inet_pton(AF_INET, srcIP, src);
-    inet_pton(AF_INET, "192.168.30.0", start_ip);
-    unsigned int current_host = ntohl(*start_ip);
-
-    thread_data->src = *src;
-    for(unsigned long i = 1; i < 254; i++) {
+    inet_pton(AF_INET, srcIP, &src);
+    inet_pton(AF_INET, "192.168.30.0", &start_ip);
+    unsigned int current_host = ntohl(start_ip);
+    
+    for(unsigned long i = 1; i <= 254; i++) {
         IPAddr target = htonl(current_host + i);
-        /*
-        BYTE mac_addr[6];
-        ULONG length = MAC_ADDRESS_LENGTH;
-        int res = SendARP(target, *src, (PULONG) mac_addr, &length);
-        */
         DWORD thread_ID = i;
+
+        THREAD_DATA *thread_data = malloc(sizeof(THREAD_DATA));
+        thread_data->src = src;
         thread_data->target = target;
-        HANDLE t = CreateThread(NULL, 0, ArpSweepThread, thread_data, 0, &thread_ID);
 
-        //Print the address retrieved.
-        /*
-        if (res == NO_ERROR) {
-            char ipStr[INET_ADDRSTRLEN];
-            struct in_addr sa_in;
-            sa_in.S_un.S_addr = target;
-            inet_ntop(AF_INET, &sa_in, ipStr, INET_ADDRSTRLEN);
-            printf("[+] Host trovato: %s\n", ipStr);
+        t[i - 1] = CreateThread(NULL, 0, ArpSweepThread, thread_data, 0, &thread_ID);
+    }
+
+    //Closing all the threads.
+    for(int i = 0; i < THREAD_WORKERS; i++) {
+        WaitForSingleObject(t[i + 1], INFINITE);
+        GetExitCodeThread(t[i + 1], &exit);
+        CloseHandle(t[i + 1]);
+
+        if (exit != 0) {
+            inet_ntop(AF_INET, &exit, ipStr, INET_ADDRSTRLEN);
+            printf("Host : %s\n", ipStr);
         }
-        */
-
-
     }
 }
 
@@ -92,7 +86,7 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
 
 
         printf("MAC Address: ");
-        for (int i = 0; i < adapter->PhysicalAddressLength; i++) {
+        for (long unsigned int i = 0; i < adapter->PhysicalAddressLength; i++) {
             printf("%02X", adapter->PhysicalAddress[i]);
             if (i < adapter->PhysicalAddressLength - 1) {
                 printf("-");
@@ -109,8 +103,12 @@ int main(int argc, char *argv[]) {
     IP_ADAPTER_ADDRESSES *adapterAddresses = NULL;
     IP_ADAPTER_ADDRESSES *adapterCursor = NULL;
     ULONG outBufLen = 15000; // Initial buffer size for adapter information.
-    
-    IPAddr local_ip;
+
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        printf("Errore inizializzazione Winsock.\n");
+        return 1;
+    }
 
     adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc(outBufLen);
     if (adapterAddresses == NULL) {
@@ -129,11 +127,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (argc < 1) {
+    if (argc < 2) {  
         printf("Work in progress...\n");
         return 0;
     } else {
-        printf("%s", argv[1]);
         if (strcmp("-help", argv[1]) == 0) {
 
         }
