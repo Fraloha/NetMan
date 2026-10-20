@@ -60,6 +60,7 @@ void ARP_sweep(const char *srcIP) {
         CloseHandle(t[i + 1]);
 
         if (exit != 0) {
+            printf("%d\t%ld\n",i, exit);
             inet_ntop(AF_INET, &exit, ipStr, INET_ADDRSTRLEN);
             printf("Host : %s\n", ipStr);
         }
