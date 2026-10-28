@@ -28,16 +28,16 @@ NETWORK_INFO WINAPI ArpSweepThread(LPVOID param) {
     ULONG length = MAC_ADDRESS_LENGTH;
     THREAD_DATA *data = (THREAD_DATA *)param;
 
-    int res = SendARP(data->target, data->src, (PULONG) *mac_addr, &length);
+    int res = SendARP(data->target, data->src, *mac_addr, &length);
 
     if (res == NO_ERROR) {
         info.ip = data->target;
-        info.mac = &mac_addr;
+        info.mac = mac_addr;
         info.result = data->target;
     }
 
     free(data);
-    return info;
+    return &info;
 }
 
 
