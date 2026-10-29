@@ -21,23 +21,23 @@ typedef struct {
 } NETWORK_INFO;
 
 //Arp Sweep Thread
-NETWORK_INFO WINAPI ArpSweepThread(LPVOID param) {
-    NETWORK_INFO info;
+DWORD WINAPI ArpSweepThread(LPVOID param) {
+    NETWORK_INFO *info = malloc(sizeof(NETWORK_INFO));
 
     BYTE *mac_addr = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
     ULONG length = MAC_ADDRESS_LENGTH;
     THREAD_DATA *data = (THREAD_DATA *)param;
 
-    int res = SendARP(data->target, data->src, *mac_addr, &length);
+    int res = SendARP(data->target, data->src, (PULONG)mac_addr, &length);
 
     if (res == NO_ERROR) {
-        info.ip = data->target;
-        info.mac = mac_addr;
-        info.result = data->target;
+        info->ip = data->target;
+        info->mac = mac_addr;
+        info->result = data->target;
     }
 
     free(data);
-    return &info;
+    return (DWORD)(uintptr_t)info;
 }
 
 
@@ -64,15 +64,17 @@ void ARP_sweep(const char *srcIP) {
 
     //Closing all the threads.
     for(int i = 0; i < THREAD_WORKERS; i++) {
-        NETWORK_INFO *thread_info = malloc(sizeof(NETWORK_INFO));
+        DWORD thread_result;
+        NETWORK_INFO *thread_info;
 
         WaitForSingleObject(t[i + 1], INFINITE);
-        GetExitCodeThread(t[i + 1], thread_info);
+        GetExitCodeThread(t[i + 1], &thread_result);
         CloseHandle(t[i + 1]);
 
-        if (exit != 0) {
+        if (thread_result != 0) {
             //printf("%d\t%ld\n",i, exit);
-            inet_ntop(AF_INET, thread_info->ip, ipStr, INET_ADDRSTRLEN);
+            thread_info = (NETWORK_INFO *)&thread_result;
+            inet_ntop(AF_INET, &(thread_info->ip), ipStr, INET_ADDRSTRLEN);
             printf("Host : %s\t%s\n", ipStr, thread_info->mac);
         }
     }
