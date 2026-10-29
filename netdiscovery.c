@@ -77,7 +77,7 @@ void ARP_sweep(const char *srcIP) {
     }
 
     //Closing all the threads.
-    for(int i = 0; i <= THREAD_WORKERS - 1; i++) {
+    for(int i = 0; i < THREAD_WORKERS - 1; i++) {
         DWORD thread_result;
         NETWORK_INFO *thread_info;
 
