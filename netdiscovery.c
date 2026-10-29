@@ -20,6 +20,16 @@ typedef struct {
     unsigned int result;
 } NETWORK_INFO;
 
+
+void print_mac(BYTE *mac_address) {
+    for (long unsigned int i = 0; i < MAC_ADDRESS_LENGTH; i++) {
+            printf("%02X", (unsigned int) mac_address[i]);
+            if (i < MAC_ADDRESS_LENGTH - 1) {
+                printf("-");
+            }
+        }
+}
+
 //Arp Sweep Thread
 DWORD WINAPI ArpSweepThread(LPVOID param) {
     NETWORK_INFO *info = malloc(sizeof(NETWORK_INFO));
@@ -76,7 +86,7 @@ void ARP_sweep(const char *srcIP) {
         CloseHandle(t[i]);
 
         printf("thread result : %ld\t", thread_result);
-        if (thread_result != NULL) {
+        if (thread_result != 0) {
             //printf("%d\t%ld\n",i, exit);
             thread_info = (NETWORK_INFO *)(uintptr_t)thread_result;
             inet_ntop(AF_INET, &(thread_info->ip), ipStr, INET_ADDRSTRLEN);
@@ -86,15 +96,6 @@ void ARP_sweep(const char *srcIP) {
         }
         printf("\n");
     }
-}
-
-void print_mac(BYTE mac_address) {
-    for (long unsigned int i = 0; i < MAC_ADDRESS_LENGTH; i++) {
-            printf("%02X", mac_address);
-            if (i < MAC_ADDRESS_LENGTH - 1) {
-                printf("-");
-            }
-        }
 }
 
 void show_info(IP_ADAPTER_ADDRESSES *adapter) {
