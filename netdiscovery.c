@@ -80,7 +80,9 @@ void ARP_sweep(const char *srcIP) {
             //printf("%d\t%ld\n",i, exit);
             thread_info = (NETWORK_INFO *)(uintptr_t)thread_result;
             inet_ntop(AF_INET, &(thread_info->ip), ipStr, INET_ADDRSTRLEN);
-            printf("Host : %s\t%s", ipStr, thread_info->mac);
+            printf("Host : %s\t", ipStr);
+            print_mac(thread_info->mac);
+            printf("\n\n");
         }
         printf("\n");
     }
