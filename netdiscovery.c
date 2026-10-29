@@ -34,6 +34,10 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
         info->ip = data->target;
         info->mac = mac_addr;
         info->result = data->target;
+    } else {
+        if (info != NULL)
+            free(info);
+        info = NULL;
     }
 
     free(data);
@@ -67,17 +71,28 @@ void ARP_sweep(const char *srcIP) {
         DWORD thread_result;
         NETWORK_INFO *thread_info;
 
-        WaitForSingleObject(t[i + 1], INFINITE);
-        GetExitCodeThread(t[i + 1], &thread_result);
-        CloseHandle(t[i + 1]);
+        WaitForSingleObject(t[i], INFINITE);
+        GetExitCodeThread(t[i], &thread_result);
+        CloseHandle(t[i]);
 
-        if (thread_result != 0) {
+        printf("thread result : %ld\t", thread_result);
+        if (thread_result != NULL) {
             //printf("%d\t%ld\n",i, exit);
             thread_info = (NETWORK_INFO *)(uintptr_t)thread_result;
             inet_ntop(AF_INET, &(thread_info->ip), ipStr, INET_ADDRSTRLEN);
-            printf("Host : %s\t%s\n", ipStr, thread_info->mac);
+            printf("Host : %s\t%s", ipStr, thread_info->mac);
         }
+        printf("\n");
     }
+}
+
+void print_mac(BYTE mac_address) {
+    for (long unsigned int i = 0; i < MAC_ADDRESS_LENGTH; i++) {
+            printf("%02X", mac_address);
+            if (i < MAC_ADDRESS_LENGTH - 1) {
+                printf("-");
+            }
+        }
 }
 
 void show_info(IP_ADAPTER_ADDRESSES *adapter) {
@@ -100,12 +115,13 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
 
 
         printf("MAC Address: ");
-        for (long unsigned int i = 0; i < adapter->PhysicalAddressLength; i++) {
+        print_mac(adapter->PhysicalAddress);
+        /*-for (long unsigned int i = 0; i < adapter->PhysicalAddressLength; i++) {
             printf("%02X", adapter->PhysicalAddress[i]);
             if (i < adapter->PhysicalAddressLength - 1) {
                 printf("-");
             }
-        }
+        }*/
         printf("\n\n");
         adapter = adapter->Next;
     }
