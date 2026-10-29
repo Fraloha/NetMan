@@ -77,7 +77,7 @@ void ARP_sweep(const char *srcIP) {
     }
 
     //Closing all the threads.
-    for(int i = 0; i < THREAD_WORKERS; i++) {
+    for(int i = 0; i <= THREAD_WORKERS - 1; i++) {
         DWORD thread_result;
         NETWORK_INFO *thread_info;
 
@@ -93,6 +93,9 @@ void ARP_sweep(const char *srcIP) {
             printf("Host : %s\t", ipStr);
             print_mac(thread_info->mac);
             printf("\n\n");
+
+            free(thread_info->mac);
+            free(thread_info);
         }
         printf("\n");
     }
