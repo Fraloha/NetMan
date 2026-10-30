@@ -54,6 +54,30 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
     return (DWORD)(uintptr_t)info;
 }
 
+void ARP_sweep_seq(const char *srcIP) {
+    IPAddr src;
+    IPAddr start_ip;
+    char ipStr[INET_ADDRSTRLEN]; 
+
+    inet_pton(AF_INET, srcIP, &src);
+    inet_pton(AF_INET, "192.168.30.0", &start_ip);
+    unsigned int current_host = ntohl(start_ip);
+    
+    for(unsigned long i = 1; i <= 254; i++) {
+        IPAddr target = htonl(current_host + i);
+        BYTE *mac_addr = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
+        ULONG length = MAC_ADDRESS_LENGTH;
+
+        int res = SendARP(target, src, (PULONG)mac_addr, &length);
+        if (res == NO_ERROR) {
+            inet_ntop(AF_INET, &target, ipStr, INET_ADDRSTRLEN);
+            printf("Host : %s\t", ipStr);
+            print_mac(mac_addr);
+            printf("\n");
+        }
+        free(mac_addr);
+    }
+}
 
 void ARP_sweep(const char *srcIP) {
     IPAddr src;
@@ -171,7 +195,12 @@ int main(int argc, char *argv[]) {
 
         }
         else if (strcmp("-showinterface", argv[1]) == 0)  show_info(adapterCursor);
-        else if (strcmp("-arpsweep", argv[1]) == 0)       ARP_sweep(HARD_CODED_ADDRESS);
+        else if (strcmp("-arpsweep", argv[1]) == 0) {
+            if (strcmp("-mt", argv[2]) == 0)
+                ARP_sweep(HARD_CODED_ADDRESS);
+            else
+                ARP_sweep_seq(HARD_CODED_ADDRESS);
+        }
         else                                              printf("It's not a command...");
     }
 
