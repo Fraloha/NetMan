@@ -99,13 +99,12 @@ void ARP_sweep(const char *srcIP) {
             GetExitCodeThread(t[i], &thread_result);
             CloseHandle(t[i]);
 
-            printf("thread result : %ld\t", thread_result);
             if (info[OFFSET].found == TRUE) {
-                inet_ntop(AF_INET, &(info[OFFSET]), ipStr, INET_ADDRSTRLEN);
+                inet_ntop(AF_INET, &(info[OFFSET].target), ipStr, INET_ADDRSTRLEN);
                 printf("Host : %s\t", ipStr);
-                print_mac(info->mac);
+                print_mac(info[OFFSET].mac);
+                printf("\n");
             }
-            printf("\n");
         }
     }
 }
