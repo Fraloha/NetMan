@@ -3,55 +3,44 @@
 #include <winsock2.h>
 #include <iphlpapi.h>
 #include <ws2tcpip.h>
+#include <stdint.h>
 
-#define MAC_ADDRESS_LENGTH 6
+#define MAC_ADDRESS_LENGTH 8
 #define MAX_COMMAND_LENGTH 100
 #define HARD_CODED_ADDRESS "192.168.30.43"
-#define THREAD_WORKERS 255
+#define THREAD_WORKERS 32
+#define MAX_HOST_SUBNET 256
+#define OFFSET i + batch
 
 typedef struct {
     IPAddr target;
     IPAddr src;
-} THREAD_DATA;
+    BYTE mac[MAC_ADDRESS_LENGTH];
+    BOOL found;
+} RECORD_NETWORK_DATA;
 
-typedef struct {
-    BYTE *mac;
-    IPAddr ip;
-    unsigned int result;
-} NETWORK_INFO;
-
+RECORD_NETWORK_DATA info[MAX_HOST_SUBNET - 1];
 
 void print_mac(BYTE *mac_address) {
     for (long unsigned int i = 0; i < MAC_ADDRESS_LENGTH; i++) {
-            printf("%02X", (unsigned int) mac_address[i]);
+            printf("%02X", (unsigned int) *(mac_address + i));
             if (i < MAC_ADDRESS_LENGTH - 1) {
                 printf("-");
             }
-        }
+    }
 }
 
 //Arp Sweep Thread
 DWORD WINAPI ArpSweepThread(LPVOID param) {
-    NETWORK_INFO *info = malloc(sizeof(NETWORK_INFO));
-
-    BYTE *mac_addr = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
     ULONG length = MAC_ADDRESS_LENGTH;
-    THREAD_DATA *data = (THREAD_DATA *)param;
+    RECORD_NETWORK_DATA *data = (RECORD_NETWORK_DATA *)param;
 
-    int res = SendARP(data->target, data->src, (PULONG)mac_addr, &length);
+    int res = SendARP(data->target, data->src, data->mac, &length);
 
-    if (res == NO_ERROR) {
-        info->ip = data->target;
-        info->mac = mac_addr;
-        info->result = data->target;
-    } else {
-        if (info != NULL)
-            free(info);
-        info = NULL;
-    }
+    if (res == NO_ERROR)  data->found = TRUE;
+    else data->found = FALSE;
 
-    free(data);
-    return (DWORD)(uintptr_t)info;
+    return data->found;
 }
 
 void ARP_sweep_seq(const char *srcIP) {
@@ -82,47 +71,42 @@ void ARP_sweep_seq(const char *srcIP) {
 void ARP_sweep(const char *srcIP) {
     IPAddr src;
     IPAddr start_ip;
-    HANDLE t[THREAD_WORKERS];
     char ipStr[INET_ADDRSTRLEN]; 
 
     inet_pton(AF_INET, srcIP, &src);
     inet_pton(AF_INET, "192.168.30.0", &start_ip);
     unsigned int current_host = ntohl(start_ip);
-    
-    for(unsigned long i = 1; i <= 254; i++) {
-        IPAddr target = htonl(current_host + i);
-        DWORD thread_ID = i;
 
-        THREAD_DATA *thread_data = malloc(sizeof(THREAD_DATA));
-        thread_data->src = src;
-        thread_data->target = target;
+    for(unsigned long batch = 1; batch < MAX_HOST_SUBNET - 1; batch+=THREAD_WORKERS) {
+        HANDLE *t = calloc(THREAD_WORKERS, sizeof(HANDLE));
+        for(unsigned long i = 0; i < THREAD_WORKERS; i++) {
+            IPAddr target = htonl(current_host + OFFSET);
+            DWORD thread_ID = OFFSET;
 
-        t[i - 1] = CreateThread(NULL, 0, ArpSweepThread, thread_data, 0, &thread_ID);
-    }
+            info[OFFSET].src = src;
+            info[OFFSET].target = target;
 
-    //Closing all the threads.
-    for(int i = 0; i < THREAD_WORKERS; i++) {
-        DWORD thread_result;
-        NETWORK_INFO *thread_info;
-
-        if (t[i] == NULL)  continue;
-
-        WaitForSingleObject(t[i], INFINITE);
-        GetExitCodeThread(t[i], &thread_result);
-        CloseHandle(t[i]);
-
-        printf("thread result : %ld\t", thread_result);
-        if (thread_result != 0) {
-            thread_info = (NETWORK_INFO *)(uintptr_t)thread_result;
-            inet_ntop(AF_INET, &(thread_info->ip), ipStr, INET_ADDRSTRLEN);
-            printf("Host : %s\t", ipStr);
-            print_mac(thread_info->mac);
-            printf("\n\n");
-
-            free(thread_info->mac);
-            free(thread_info);
+            t[i] = CreateThread(NULL, 0, ArpSweepThread, &info[OFFSET], 0, &thread_ID);
         }
-        printf("\n");
+
+        //Closing all the threads.
+        for(int i = 0; i < THREAD_WORKERS; i++) {
+            DWORD thread_result;
+
+            if (t[i] == NULL)  continue;
+
+            WaitForSingleObject(t[i], INFINITE);
+            GetExitCodeThread(t[i], &thread_result);
+            CloseHandle(t[i]);
+
+            printf("thread result : %ld\t", thread_result);
+            if (info[OFFSET].found == TRUE) {
+                inet_ntop(AF_INET, &(info[OFFSET]), ipStr, INET_ADDRSTRLEN);
+                printf("Host : %s\t", ipStr);
+                print_mac(info->mac);
+            }
+            printf("\n");
+        }
     }
 }
 
