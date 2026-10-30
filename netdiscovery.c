@@ -30,6 +30,17 @@ void print_mac(BYTE *mac_address) {
     }
 }
 
+char* get_mac_string(BYTE *mac_address) {
+    char *string = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
+    for (long unsigned int i = 0; i < MAC_ADDRESS_LENGTH; i++) {
+            sprintf(&string[i], "%02X", (unsigned int) *(mac_address + i));
+            if (i < MAC_ADDRESS_LENGTH - 1) {
+                sprintf(&string[i + 1], "-");
+            }
+    }
+    return string;
+}
+
 //Arp Sweep Thread
 DWORD WINAPI ArpSweepThread(LPVOID param) {
     ULONG length = MAC_ADDRESS_LENGTH;
@@ -130,6 +141,9 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
 
         printf("MAC Address: ");
         print_mac(adapter->PhysicalAddress);
+        printf("\n");
+        printf("MAC Address: ");
+        printf("%s\n", get_mac_string(adapter->PhysicalAddress));
         /*-for (long unsigned int i = 0; i < adapter->PhysicalAddressLength; i++) {
             printf("%02X", adapter->PhysicalAddress[i]);
             if (i < adapter->PhysicalAddressLength - 1) {
