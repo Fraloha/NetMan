@@ -90,6 +90,8 @@ void ARP_sweep(const char *srcIP) {
     unsigned int current_host = ntohl(start_ip);
     
     for(unsigned long i = 1; i <= 254; i++) {
+        DWORD thread_result;
+        NETWORK_INFO *thread_info;
         IPAddr target = htonl(current_host + i);
         DWORD thread_ID = i;
 
@@ -98,10 +100,27 @@ void ARP_sweep(const char *srcIP) {
         thread_data->target = target;
 
         t[i - 1] = CreateThread(NULL, 0, ArpSweepThread, thread_data, 0, &thread_ID);
+        WaitForSingleObject(t[i], INFINITE);
+        GetExitCodeThread(t[i], &thread_result);
+        CloseHandle(t[i]);
+
+        printf("thread result : %ld\t", thread_result);
+        if (thread_result != 0) {
+            //printf("%d\t%ld\n",i, exit);
+            thread_info = (NETWORK_INFO *)(uintptr_t)thread_result;
+            inet_ntop(AF_INET, &(thread_info->ip), ipStr, INET_ADDRSTRLEN);
+            printf("Host : %s\t", ipStr);
+            print_mac(thread_info->mac);
+            printf("\n\n");
+
+            free(thread_info->mac);
+            free(thread_info);
+        }
+        printf("\n");
     }
 
     //Closing all the threads.
-    for(int i = 0; i < THREAD_WORKERS - 1; i++) {
+    /*for(int i = 0; i < THREAD_WORKERS - 1; i++) {
         DWORD thread_result;
         NETWORK_INFO *thread_info;
 
@@ -122,7 +141,7 @@ void ARP_sweep(const char *srcIP) {
             free(thread_info);
         }
         printf("\n");
-    }
+    }*/
 }
 
 void show_info(IP_ADAPTER_ADDRESSES *adapter) {
@@ -196,10 +215,9 @@ int main(int argc, char *argv[]) {
         }
         else if (strcmp("-showinterface", argv[1]) == 0)  show_info(adapterCursor);
         else if (strcmp("-arpsweep", argv[1]) == 0) {
-            if (argc < 2)
+            if (argc < 3) {
                 ARP_sweep_seq(HARD_CODED_ADDRESS);
-                
-            if (strcmp("-mt", argv[2]) == 0 || strcmp("-multi-threaded", argv[2]) == 0)
+            } else if (strcmp("-mt", argv[2]) == 0 || strcmp("-multi-threaded", argv[2]) == 0)
                 ARP_sweep(HARD_CODED_ADDRESS);
         }
         else                                              printf("It's not a command...");
