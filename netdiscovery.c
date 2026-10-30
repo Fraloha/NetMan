@@ -196,10 +196,11 @@ int main(int argc, char *argv[]) {
         }
         else if (strcmp("-showinterface", argv[1]) == 0)  show_info(adapterCursor);
         else if (strcmp("-arpsweep", argv[1]) == 0) {
+            if (argc < 2)
+                ARP_sweep_seq(HARD_CODED_ADDRESS);
+                
             if (strcmp("-mt", argv[2]) == 0 || strcmp("-multi-threaded", argv[2]) == 0)
                 ARP_sweep(HARD_CODED_ADDRESS);
-            else
-                ARP_sweep_seq(HARD_CODED_ADDRESS);
         }
         else                                              printf("It's not a command...");
     }
