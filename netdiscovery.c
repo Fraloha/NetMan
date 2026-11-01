@@ -187,23 +187,22 @@ int main(int argc, char *argv[]) {
         free(adapterAddresses);
         return 1;
     }
-
+    
     if (argc < 3) {  
         printf("Work in progress...\n");
         return 0;
-    } else if (strcmp("-interface", argv[1]) == 0) {
+    } else if (strcmp("-help", argv[3]) == 0) print_help(); 
+    else if(strcmp("-interface", argv[1]) == 0) {
         const char *interfaceAddress = argv[2];
 
-        if (strcmp("-help", argv[3]) == 0) print_help();
-        else if (strcmp("-showinterface", argv[3]) == 0)  show_info(adapterCursor);
-        else if (strcmp("-arpsweep", argv[3]) == 0) {
-            if (argc < 3) {
-                ARP_sweep_seq(HARD_CODED_ADDRESS);
-            } else if (strcmp("-mt", argv[4]) == 0 || strcmp("-multi-threaded", argv[4]) == 0)
+        if (strcmp("-arpsweep", argv[3]) == 0) {
+            if (argc < 3)   ARP_sweep_seq(HARD_CODED_ADDRESS);
+            else if (strcmp("-mt", argv[4]) == 0 || strcmp("-multi-threaded", argv[4]) == 0)
                 ARP_sweep(HARD_CODED_ADDRESS);
         }
-        else                                              printf("It's not a command...");
-    }
+
+    }else if (strcmp("-showinterface", argv[3]) == 0)  show_info(adapterCursor);
+    else                                                printf("It's not a command...");
 
     free(adapterAddresses);
     return 0;
