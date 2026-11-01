@@ -127,7 +127,7 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
 
     while (adapter != NULL) {
         printf("Adapter Name: %s\n", adapter->AdapterName);
-        wprintf(L"Description: %s\n", adapter->Description);
+        wprintf(L"Description: %ls\n", (wchar_t *)adapter->Description);
 
         //Skipping 0.0.0.0 address.
         PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapter->FirstUnicastAddress->Next;
@@ -188,20 +188,17 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    if (argc < 3) {  
-        printf("Work in progress...\n");
-        return 0;
-    } else if (strcmp("-help", argv[3]) == 0) print_help(); 
+    if (strcmp("-help", argv[1]) == 0 || argc < 1) print_help(); 
     else if(strcmp("-interface", argv[1]) == 0) {
         const char *interfaceAddress = argv[2];
 
         if (strcmp("-arpsweep", argv[3]) == 0) {
-            if (argc < 3)   ARP_sweep_seq(HARD_CODED_ADDRESS);
+            if (argc < 3)   ARP_sweep_seq(interfaceAddress);
             else if (strcmp("-mt", argv[4]) == 0 || strcmp("-multi-threaded", argv[4]) == 0)
-                ARP_sweep(HARD_CODED_ADDRESS);
+                ARP_sweep(interfaceAddress);
         }
 
-    }else if (strcmp("-showinterface", argv[3]) == 0)  show_info(adapterCursor);
+    }else if (strcmp("-showinterface", argv[1]) == 0)  show_info(adapterCursor);
     else                                                printf("It's not a command...");
 
     free(adapterAddresses);
