@@ -31,13 +31,18 @@ void print_mac(BYTE *mac_address) {
 }
 
 char* get_mac_string(BYTE *mac_address) {
-    char *string = malloc(sizeof(char) * 16);
+    char *string = calloc(32, sizeof(char));
+    char *buffer = calloc(3, sizeof(char));
     for (long unsigned int i = 0; i < 16; i++) {
-            sprintf(string + i, "%02X", (unsigned int) *(mac_address + i));
+            sprintf(buffer, "%02X", (unsigned int) *(mac_address + i));
+            strcat(string, buffer);
             if (i < MAC_ADDRESS_LENGTH - 1) {
-                sprintf(string + i + 1, "-");
+                //sprintf(string + i + 1, "-");
+                strcat(string, "-");
             }
     }
+    strcat(string, "\0");
+    free(buffer);
     return string;
 }
 
