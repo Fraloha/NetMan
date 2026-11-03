@@ -101,22 +101,19 @@ void ARP_sweep(const char *srcIP) {
         HANDLE *t = calloc(THREAD_WORKERS, sizeof(HANDLE));
         for(unsigned long i = 0; i < THREAD_WORKERS; i++) {
             IPAddr target = htonl(current_host + OFFSET);
-            DWORD thread_ID = OFFSET;
 
             info[OFFSET].src = src;
             info[OFFSET].target = target;
 
-            t[i] = CreateThread(NULL, 0, ArpSweepThread, &info[OFFSET], 0, &thread_ID);
+            t[i] = CreateThread(NULL, 0, ArpSweepThread, &info[OFFSET], 0, NULL);
         }
 
         //Closing all the threads.
         for(int i = 0; i < THREAD_WORKERS; i++) {
-            DWORD thread_result;
 
             if (t[i] == NULL)  continue;
 
             WaitForSingleObject(t[i], INFINITE);
-            GetExitCodeThread(t[i], &thread_result);
             CloseHandle(t[i]);
 
             if (info[OFFSET].found == TRUE) {
@@ -167,6 +164,7 @@ int main(int argc, char *argv[]) {
     IP_ADAPTER_ADDRESSES *adapterAddresses = NULL;
     IP_ADAPTER_ADDRESSES *adapterCursor = NULL;
     ULONG outBufLen = 15000; // Initial buffer size for adapter information.
+    boolean test = FALSE;
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -180,25 +178,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    boolean alloc = FALSE;
-    for (int retries = 0; retries < 5; retries++) {
-        ULONG adapterErrorCode = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapterAddresses, &outBufLen);
 
-        // Checking if the adapter information was retrieved successfully.
-        if (adapterErrorCode == ERROR_SUCCESS) {
-            adapterCursor = adapterAddresses;
-            alloc = TRUE;
-            break;
-        } else
-            outBufLen += 1000;
-    }
+    ULONG adapterErrorCode;
+    do{
 
-    if (alloc == FALSE) {
-        printf("[ERROR] Cannot allocating buffer for adapters interfaces\n\n");
-        return 1;
-    }
+        adapterErrorCode = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapterAddresses, &outBufLen);
+
+        if (adapterErrorCode == ERROR_BUFFER_OVERFLOW){
+            adapterAddresses = (IP_ADAPTER_ADDRESSES *) realloc(adapterAddresses, outBufLen);
+        }
+
+    } while (adapterErrorCode != ERROR_SUCCESS);
+
+    adapterCursor = adapterAddresses;
     
-    if (strcmp("-help", argv[1]) == 0 || argc < 1) print_help(); 
+    if (argc < 2 || strcmp("-help", argv[1]) == 0) print_help(); 
     else if(strcmp("-interface", argv[1]) == 0) {
         const char *interfaceAddress = argv[2];
 
@@ -212,5 +206,6 @@ int main(int argc, char *argv[]) {
     else                                                printf("It's not a command...");
 
     free(adapterAddresses);
+    WSACleanup();
     return 0;
 }
