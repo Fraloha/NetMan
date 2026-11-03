@@ -191,12 +191,22 @@ int main(int argc, char *argv[]) {
     } while (adapterErrorCode != ERROR_SUCCESS);
 
     adapterCursor = adapterAddresses;
+
+    if(argc <= 2) {
+        if(argc == 1)   print_help();
+        if (strcmp("-help", argv[2]) == 0)  print_help();
+    } else if(argc <= 4) {
+        if (strcmp("-interface", argv[2]) == 0) {
+            const char *interfaceAddress = argv[2];
+        } else
+            printf("[ERROR] Unknown command.\n");
+    }
     
-    if (argc < 2 || strcmp("-help", argv[1]) == 0) print_help(); 
+    
     else if(strcmp("-interface", argv[1]) == 0) {
         const char *interfaceAddress = argv[2];
 
-        if (strcmp("-arpsweep", argv[3]) == 0) {
+        if (argc < 3 && strcmp("-arpsweep", argv[3]) == 0) {
             if (argc < 3)   ARP_sweep_seq(interfaceAddress);
             else if (strcmp("-mt", argv[4]) == 0 || strcmp("-multi-threaded", argv[4]) == 0)
                 ARP_sweep(interfaceAddress);
