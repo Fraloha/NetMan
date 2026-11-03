@@ -19,6 +19,7 @@ typedef struct {
     BOOL found;
 } RECORD_NETWORK_DATA;
 
+
 RECORD_NETWORK_DATA info[MAX_HOST_SUBNET - 1];
 
 void print_mac(BYTE *mac_address) {
@@ -32,8 +33,11 @@ void print_mac(BYTE *mac_address) {
 
 char* get_mac_string(BYTE *mac_address) {
     char *string = malloc(sizeof(char) * 16);
+    char *item_buffer = malloc(sizeof(char) * 3);
+
     for (long unsigned int i = 0; i < 16; i++) {
             sprintf(string + i, "%02X", (unsigned int) *(mac_address + i));
+            sprintf(item_buffer, )
             if (i < MAC_ADDRESS_LENGTH - 1) {
                 sprintf(string + i + 1, "-");
             }
