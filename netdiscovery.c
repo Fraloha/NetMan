@@ -34,7 +34,7 @@ char* get_mac_string(BYTE *mac_address, size_t length) {
 
     if (length == 0)
         return "N/A";
-        
+
     char *string = calloc(32, sizeof(char));
     char buffer[3];
     for (long unsigned int i = 0; i < length; i++) {
@@ -136,8 +136,9 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
         printf("Adapter Name: %s\n", adapter->AdapterName);
         wprintf(L"Description: %ls\n", (wchar_t *)adapter->Description);
 
-        //Skipping 0.0.0.0 address.
-        PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapter->FirstUnicastAddress->Next;
+        
+        PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapter->FirstUnicastAddress;
+        if (addressCursor != NULL) //Skipping 0.0.0.0 address. addressCursor = addressCursor->Next;
 
         printf("IP address: ");
         while (addressCursor != NULL) {
@@ -179,14 +180,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    ULONG adapterErrorCode = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapterAddresses, &outBufLen);
+    boolean alloc = FALSE;
+    for (int retries = 0; retries < 5; retries++) {
+        ULONG adapterErrorCode = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapterAddresses, &outBufLen);
 
-    // Checking if the adapter information was retrieved successfully.
-    if (adapterErrorCode == ERROR_SUCCESS) {
-        adapterCursor = adapterAddresses;
-    } else {
-        printf("Error retrieving adapter information: %lu\n", adapterErrorCode);
-        free(adapterAddresses);
+        // Checking if the adapter information was retrieved successfully.
+        if (adapterErrorCode == ERROR_SUCCESS) {
+            adapterCursor = adapterAddresses;
+            alloc = TRUE;
+            break;
+        } else
+            outBufLen += 1000;
+    }
+
+    if (alloc == FALSE) {
+        printf("[ERROR] Cannot allocating buffer for adapters interfaces\n\n");
         return 1;
     }
     
