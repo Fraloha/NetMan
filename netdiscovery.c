@@ -30,18 +30,21 @@ void print_mac(BYTE *mac_address) {
     }
 }
 
-char* get_mac_string(BYTE *mac_address) {
+char* get_mac_string(BYTE *mac_address, size_t length) {
+
+    if (length == 0)
+        return "N/A";
+        
     char *string = calloc(32, sizeof(char));
-    char *buffer = calloc(3, sizeof(char));
-    for (long unsigned int i = 0; i < MAC_ADDRESS_LENGTH; i++) {
+    char buffer[3];
+    for (long unsigned int i = 0; i < length; i++) {
             sprintf(buffer, "%02X", (unsigned int) *(mac_address + i));
             strcat(string, buffer);
-            if (i < MAC_ADDRESS_LENGTH - 1) {
+            if (i < length - 1) {
                 //sprintf(string + i + 1, "-");
                 strcat(string, "-");
             }
     }
-    free(buffer);
     return string;
 }
 
@@ -149,13 +152,8 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
         print_mac(adapter->PhysicalAddress);
         printf("\n");
         printf("MAC Address: ");
-        printf("%s\n", get_mac_string(adapter->PhysicalAddress));
-        /*-for (long unsigned int i = 0; i < adapter->PhysicalAddressLength; i++) {
-            printf("%02X", adapter->PhysicalAddress[i]);
-            if (i < adapter->PhysicalAddressLength - 1) {
-                printf("-");
-            }
-        }*/
+        printf("%s\n", get_mac_string(adapter->PhysicalAddress, adapter->PhysicalAddressLength));
+        
         printf("\n\n");
         adapter = adapter->Next;
     }
