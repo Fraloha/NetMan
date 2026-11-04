@@ -72,8 +72,10 @@ void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
     IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
     unsigned int current_host = ntohl(start_ip);
+
+    unsigned long total_hosts = (2 << (32 - subnet_prefix)) - 2;
     
-    for(unsigned long i = 1; i <= 254; i++) {
+    for(unsigned long i = 1; i <= total_hosts; i++) {
         IPAddr target = htonl(current_host + i);
         BYTE *mac_addr = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
         ULONG length = MAC_ADDRESS_LENGTH;
