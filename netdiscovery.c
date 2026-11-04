@@ -65,7 +65,6 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
 
 void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     IPAddr src;
-    IPAddr start_ip;
     char ipStr[INET_ADDRSTRLEN]; 
 
     inet_pton(AF_INET, srcIP, &src);
@@ -73,7 +72,7 @@ void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
     unsigned int current_host = ntohl(start_ip);
 
-    unsigned long total_hosts = (2 << (32 - subnet_prefix)) - 2;
+    unsigned long total_hosts = (1 << (32 - subnet_prefix)) - 2;
     
     for(unsigned long i = 1; i <= total_hosts; i++) {
         IPAddr target = htonl(current_host + i);
@@ -100,7 +99,7 @@ void ARP_sweep(const char *srcIP, int subnet_prefix) {
 
     inet_pton(AF_INET, srcIP, &src);
     unsigned int current_host = ntohl(start_ip);
-    unsigned long total_hosts = (2 << (32 - subnet_prefix)) - 2;
+    unsigned long total_hosts = (1 << (32 - subnet_prefix)) - 2;
 
     unsigned long thread_workers = 0;
 
