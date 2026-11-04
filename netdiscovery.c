@@ -63,13 +63,14 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
     return data->found;
 }
 
-void ARP_sweep_seq(const char *srcIP, const char *startIP) {
+void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     IPAddr src;
     IPAddr start_ip;
     char ipStr[INET_ADDRSTRLEN]; 
 
     inet_pton(AF_INET, srcIP, &src);
-    inet_pton(AF_INET, startIP, &start_ip);
+    unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
+    IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
     unsigned int current_host = ntohl(start_ip);
     
     for(unsigned long i = 1; i <= 254; i++) {
@@ -88,18 +89,25 @@ void ARP_sweep_seq(const char *srcIP, const char *startIP) {
     }
 }
 
-void ARP_sweep(const char *srcIP, const char *startIP) {
+void ARP_sweep(const char *srcIP, int subnet_prefix) {
     IPAddr src;
     IPAddr start_ip;
-    char ipStr[INET_ADDRSTRLEN]; 
+    char ipStr[INET_ADDRSTRLEN];
+    unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
+    IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
 
     inet_pton(AF_INET, srcIP, &src);
-    inet_pton(AF_INET, startIP, &start_ip);
     unsigned int current_host = ntohl(start_ip);
+    unsigned long total_hosts = (2 << (32 - subnet_prefix)) - 2;
 
-    for(unsigned long batch = 1; batch < MAX_HOST_SUBNET - 1; batch+=THREAD_WORKERS) {
-        HANDLE *t = calloc(THREAD_WORKERS, sizeof(HANDLE));
-        for(unsigned long i = 0; i < THREAD_WORKERS; i++) {
+    unsigned long thread_workers = 0;
+
+    if (total_hosts < THREAD_WORKERS) thread_workers = total_hosts;
+    else thread_workers = THREAD_WORKERS;
+
+    for(unsigned long batch = 1; batch < total_hosts; batch+=thread_workers) {
+        HANDLE *t = calloc(thread_workers, sizeof(HANDLE));
+        for(unsigned long i = 0; i < thread_workers; i++) {
             IPAddr target = htonl(current_host + OFFSET);
 
             info[OFFSET].src = src;
@@ -109,7 +117,7 @@ void ARP_sweep(const char *srcIP, const char *startIP) {
         }
 
         //Closing all the threads.
-        for(int i = 0; i < THREAD_WORKERS; i++) {
+        for(int i = 0; i < thread_workers; i++) {
 
             if (t[i] == NULL)  continue;
 
@@ -205,11 +213,11 @@ int main(int argc, char *argv[]) {
     else if (argc == 2 && strcmp(argv[1], "-show-interfaces") == 0) show_info(adapterCursor);
     else if (argc >= 3 && strcmp(argv[1], "-interface") == 0) {
         interfaceAddress = argv[2];
-        const char *initial_IP = adapterCursor->FirstUnicastAddress->OnLinkPrefixLength; // Store the initial IP address for later use
+        int subnet_prefix = adapterCursor->FirstUnicastAddress->OnLinkPrefixLength; // Store the initial IP address for later use
         if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
-            ARP_sweep_seq(interfaceAddress, initial_IP);
+            ARP_sweep_seq(interfaceAddress, subnet_prefix);
         else if (argc == 5 && strcmp(argv[3], "-arp-sweep") == 0 && strcmp(argv[4], "-mt") == 0)
-            ARP_sweep(interfaceAddress, initial_IP);
+            ARP_sweep(interfaceAddress, subnet_prefix);
     } else printf("Invalid command or option. Use -h or --help for usage information.\n");
 
     free(adapterAddresses);
