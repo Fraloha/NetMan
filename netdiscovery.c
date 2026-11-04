@@ -63,13 +63,13 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
     return data->found;
 }
 
-void ARP_sweep_seq(const char *srcIP) {
+void ARP_sweep_seq(const char *srcIP, const char *startIP) {
     IPAddr src;
     IPAddr start_ip;
     char ipStr[INET_ADDRSTRLEN]; 
 
     inet_pton(AF_INET, srcIP, &src);
-    inet_pton(AF_INET, "192.168.30.0", &start_ip);
+    inet_pton(AF_INET, startIP, &start_ip);
     unsigned int current_host = ntohl(start_ip);
     
     for(unsigned long i = 1; i <= 254; i++) {
@@ -88,13 +88,13 @@ void ARP_sweep_seq(const char *srcIP) {
     }
 }
 
-void ARP_sweep(const char *srcIP) {
+void ARP_sweep(const char *srcIP, const char *startIP) {
     IPAddr src;
     IPAddr start_ip;
     char ipStr[INET_ADDRSTRLEN]; 
 
     inet_pton(AF_INET, srcIP, &src);
-    inet_pton(AF_INET, "192.168.30.0", &start_ip);
+    inet_pton(AF_INET, startIP, &start_ip);
     unsigned int current_host = ntohl(start_ip);
 
     for(unsigned long batch = 1; batch < MAX_HOST_SUBNET - 1; batch+=THREAD_WORKERS) {
@@ -205,10 +205,11 @@ int main(int argc, char *argv[]) {
     else if (argc == 2 && strcmp(argv[1], "-show-interfaces") == 0) show_info(adapterCursor);
     else if (argc >= 3 && strcmp(argv[1], "-interface") == 0) {
         interfaceAddress = argv[2];
+        const char *initial_IP = adapterCursor->FirstUnicastAddress->OnLinkPrefixLength; // Store the initial IP address for later use
         if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
-            ARP_sweep_seq(interfaceAddress);
+            ARP_sweep_seq(interfaceAddress, initial_IP);
         else if (argc == 5 && strcmp(argv[3], "-arp-sweep") == 0 && strcmp(argv[4], "-mt") == 0)
-            ARP_sweep(interfaceAddress);
+            ARP_sweep(interfaceAddress, initial_IP);
     } else printf("Invalid command or option. Use -h or --help for usage information.\n");
 
     free(adapterAddresses);
