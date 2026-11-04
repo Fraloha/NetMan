@@ -201,16 +201,14 @@ int main(int argc, char *argv[]) {
 
     adapterCursor = adapterAddresses;
 
-    if (argc == 1||strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) print_help();
-    else if (argc == 2 && strcmp(argv[2], "-show-interfaces") == 0) show_info(adapterCursor);
-    else if (argc >= 3 && strcmp(argv[2], "-interface") == 0) {
-        interfaceAddress = argv[3];
-
-        BOOL command = strcmp(argv[4], "-arp-sweep") == 0;
-        BOOL option = strcmp(argv[5], "-mt") == 0;
-
-        if (argc == 5 && command && option) ARP_sweep(interfaceAddress);
-        else ARP_sweep_seq(interfaceAddress);
+    if (argc == 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) print_help();
+    else if (argc == 2 && strcmp(argv[1], "-show-interfaces") == 0) show_info(adapterCursor);
+    else if (argc >= 3 && strcmp(argv[1], "-interface") == 0) {
+        interfaceAddress = argv[2];
+        if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
+            ARP_sweep_seq(interfaceAddress);
+        else if (argc == 5 && strcmp(argv[3], "-arp-sweep") == 0 && strcmp(argv[4], "-mt") == 0)
+            ARP_sweep(interfaceAddress);
     } else printf("Invalid command or option. Use -h or --help for usage information.\n");
 
     free(adapterAddresses);
