@@ -165,6 +165,7 @@ int main(int argc, char *argv[]) {
     IP_ADAPTER_ADDRESSES *adapterCursor = NULL;
     ULONG outBufLen = 15000; // Initial buffer size for adapter information.
     boolean test = FALSE;
+    const char *interfaceAddress = NULL;
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -192,28 +193,17 @@ int main(int argc, char *argv[]) {
 
     adapterCursor = adapterAddresses;
 
-    if(argc <= 2) {
-        if(argc == 1)   print_help();
-        if (strcmp("-help", argv[2]) == 0)  print_help();
-    } else if(argc <= 4) {
-        if (strcmp("-interface", argv[2]) == 0) {
-            const char *interfaceAddress = argv[2];
-        } else
-            printf("[ERROR] Unknown command.\n");
-    }
-    
-    
-    else if(strcmp("-interface", argv[1]) == 0) {
-        const char *interfaceAddress = argv[2];
+    if (argc == 1||strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) print_help();
+    else if (argc == 2 && strcmp(argv[2], "-show-interfaces") == 0) show_info(adapterCursor);
+    else if (argc >= 3 && strcmp(argv[2], "-interface") == 0) {
+        interfaceAddress = argv[3];
 
-        if (argc < 3 && strcmp("-arpsweep", argv[3]) == 0) {
-            if (argc < 3)   ARP_sweep_seq(interfaceAddress);
-            else if (strcmp("-mt", argv[4]) == 0 || strcmp("-multi-threaded", argv[4]) == 0)
-                ARP_sweep(interfaceAddress);
-        }
+        boolean command = strcmp(argv[4], "-arp-sweep") == 0;
+        boolean option = strcmp(argv[5], "-mt") == 0;
 
-    }else if (strcmp("-showinterface", argv[1]) == 0)  show_info(adapterCursor);
-    else                                                printf("It's not a command...");
+        if (argc == 5 && command && option) ARP_sweep(interfaceAddress);
+        else ARP_sweep_seq(interfaceAddress);
+    } else printf("Invalid command or option. Use -h or --help for usage information.\n");
 
     free(adapterAddresses);
     WSACleanup();
