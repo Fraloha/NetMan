@@ -157,14 +157,22 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
     }
 }
 
-void print_help(){};
+void print_help() {
+    printf("Usage: netdiscovery [options]\n");
+    printf("Options:\n");
+    printf("  -h, --help                Show this help message and exit\n");
+    printf("  -show-interfaces          Show information about network interfaces\n");
+    printf("  -interface <IP_ADDRESS>   Specify the source IP address for ARP sweep\n");
+    printf("  -arp-sweep                Perform an ARP sweep on the specified interface\n");
+    printf("  -mt                       Use multi-threading for ARP sweep (optional)\n");
+}
 
 int main(int argc, char *argv[]) {
     
     IP_ADAPTER_ADDRESSES *adapterAddresses = NULL;
     IP_ADAPTER_ADDRESSES *adapterCursor = NULL;
     ULONG outBufLen = 15000; // Initial buffer size for adapter information.
-    boolean test = FALSE;
+    BOOL test = FALSE;
     const char *interfaceAddress = NULL;
 
     WSADATA wsaData;
@@ -198,8 +206,8 @@ int main(int argc, char *argv[]) {
     else if (argc >= 3 && strcmp(argv[2], "-interface") == 0) {
         interfaceAddress = argv[3];
 
-        boolean command = strcmp(argv[4], "-arp-sweep") == 0;
-        boolean option = strcmp(argv[5], "-mt") == 0;
+        BOOL command = strcmp(argv[4], "-arp-sweep") == 0;
+        BOOL option = strcmp(argv[5], "-mt") == 0;
 
         if (argc == 5 && command && option) ARP_sweep(interfaceAddress);
         else ARP_sweep_seq(interfaceAddress);
