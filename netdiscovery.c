@@ -7,7 +7,6 @@
 
 #define MAC_ADDRESS_LENGTH 8
 #define MAX_COMMAND_LENGTH 100
-#define HARD_CODED_ADDRESS "192.168.30.43"
 #define THREAD_WORKERS 32
 #define MAX_HOST_SUBNET 256
 #define OFFSET i + batch
@@ -72,9 +71,9 @@ void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
     unsigned int current_host = ntohl(start_ip);
 
-    unsigned long total_hosts = (1 << (32 - subnet_prefix)) - 2;
+    uint64_t total_hosts = (1 << (32 - subnet_prefix)) - 2;
     
-    for(unsigned long i = 1; i <= total_hosts; i++) {
+    for(uint64_t i = 1; i <= total_hosts; i++) {
         IPAddr target = htonl(current_host + i);
         BYTE *mac_addr = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
         ULONG length = MAC_ADDRESS_LENGTH;
@@ -99,16 +98,16 @@ void ARP_sweep(const char *srcIP, int subnet_prefix) {
 
     inet_pton(AF_INET, srcIP, &src);
     unsigned int current_host = ntohl(start_ip);
-    unsigned long total_hosts = (1 << (32 - subnet_prefix)) - 2;
+    uint64_t total_hosts = (1 << (32 - subnet_prefix)) - 2;
 
-    unsigned long thread_workers = 0;
+    uint64_t thread_workers = 0;
 
     if (total_hosts < THREAD_WORKERS) thread_workers = total_hosts;
     else thread_workers = THREAD_WORKERS;
 
-    for(unsigned long batch = 1; batch < total_hosts; batch+=thread_workers) {
+    for(uint64_t batch = 1; batch <= total_hosts; batch+=thread_workers) {
         HANDLE *t = calloc(thread_workers, sizeof(HANDLE));
-        for(unsigned long i = 0; i < thread_workers; i++) {
+        for(uint64_t i = 0; i < thread_workers; i++) {
             IPAddr target = htonl(current_host + OFFSET);
 
             info[OFFSET].src = src;
