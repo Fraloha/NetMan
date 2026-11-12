@@ -7,7 +7,6 @@
 
 #define MAC_ADDRESS_LENGTH 8
 #define MAX_COMMAND_LENGTH 100
-#define HARD_CODED_ADDRESS "192.168.30.43"
 #define THREAD_WORKERS 32
 #define MAX_HOST_SUBNET 256
 #define OFFSET i + batch
@@ -63,16 +62,18 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
     return data->found;
 }
 
-void ARP_sweep_seq(const char *srcIP) {
+void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     IPAddr src;
-    IPAddr start_ip;
     char ipStr[INET_ADDRSTRLEN]; 
 
     inet_pton(AF_INET, srcIP, &src);
-    inet_pton(AF_INET, "192.168.30.0", &start_ip);
+    unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
+    IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
     unsigned int current_host = ntohl(start_ip);
+
+    uint64_t total_hosts = (1 << (32 - subnet_prefix)) - 2;
     
-    for(unsigned long i = 1; i <= 254; i++) {
+    for(uint64_t i = 1; i <= total_hosts; i++) {
         IPAddr target = htonl(current_host + i);
         BYTE *mac_addr = malloc(sizeof(char) * MAC_ADDRESS_LENGTH);
         ULONG length = MAC_ADDRESS_LENGTH;
@@ -88,18 +89,25 @@ void ARP_sweep_seq(const char *srcIP) {
     }
 }
 
-void ARP_sweep(const char *srcIP) {
+void ARP_sweep(const char *srcIP, int subnet_prefix) {
     IPAddr src;
     IPAddr start_ip;
-    char ipStr[INET_ADDRSTRLEN]; 
+    char ipStr[INET_ADDRSTRLEN];
+    unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
+    IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
 
     inet_pton(AF_INET, srcIP, &src);
-    inet_pton(AF_INET, "192.168.30.0", &start_ip);
     unsigned int current_host = ntohl(start_ip);
+    uint64_t total_hosts = (1 << (32 - subnet_prefix)) - 2;
 
-    for(unsigned long batch = 1; batch < MAX_HOST_SUBNET - 1; batch+=THREAD_WORKERS) {
-        HANDLE *t = calloc(THREAD_WORKERS, sizeof(HANDLE));
-        for(unsigned long i = 0; i < THREAD_WORKERS; i++) {
+    uint64_t thread_workers = 0;
+
+    if (total_hosts < THREAD_WORKERS) thread_workers = total_hosts;
+    else thread_workers = THREAD_WORKERS;
+
+    for(uint64_t batch = 1; batch <= total_hosts; batch+=thread_workers) {
+        HANDLE *t = calloc(thread_workers, sizeof(HANDLE));
+        for(uint64_t i = 0; i < thread_workers; i++) {
             IPAddr target = htonl(current_host + OFFSET);
 
             info[OFFSET].src = src;
@@ -109,7 +117,7 @@ void ARP_sweep(const char *srcIP) {
         }
 
         //Closing all the threads.
-        for(int i = 0; i < THREAD_WORKERS; i++) {
+        for(int i = 0; i < thread_workers; i++) {
 
             if (t[i] == NULL)  continue;
 
@@ -157,14 +165,23 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
     }
 }
 
-void print_help(){};
+void print_help() {
+    printf("Usage: netdiscovery [options]\n");
+    printf("Options:\n");
+    printf("  -h, --help                Show this help message and exit\n");
+    printf("  -show-interfaces          Show information about network interfaces\n");
+    printf("  -interface <IP_ADDRESS>   Specify the source IP address for ARP sweep\n");
+    printf("  -arp-sweep                Perform an ARP sweep on the specified interface\n");
+    printf("  -mt                       Use multi-threading for ARP sweep (optional)\n");
+}
 
 int main(int argc, char *argv[]) {
     
     IP_ADAPTER_ADDRESSES *adapterAddresses = NULL;
     IP_ADAPTER_ADDRESSES *adapterCursor = NULL;
     ULONG outBufLen = 15000; // Initial buffer size for adapter information.
-    boolean test = FALSE;
+    BOOL test = FALSE;
+    const char *interfaceAddress = NULL;
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -192,18 +209,17 @@ int main(int argc, char *argv[]) {
 
     adapterCursor = adapterAddresses;
 
-    if(argc <= 2) {
-        if(argc == 1)   print_help();
-        if (strcmp("-help", argv[1]) == 0)  print_help();
-        else if (strcmp("-showinterface", argv[1]) == 0) show_info(adapterCursor);
-    } else if(argc <= 5) {
-        if (strcmp("-interface", argv[1]) == 0) {
-            const char *interfaceAddress = argv[2];
-            if (strcmp("-arpsweep", argv[4]) == 0)  ARP_sweep_seq(interfaceAddress);
-            else if (strcmp("-mt", argv[5]) == 0 || strcmp("-multi-threaded", argv[5]) == 0)    ARP_sweep(interfaceAddress);
-        } else
-            printf("[ERROR] Unknown command.\n");
-    }
+    if (argc == 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) print_help();
+    else if (argc == 2 && strcmp(argv[1], "-show-interfaces") == 0) show_info(adapterCursor);
+    else if (argc >= 3 && strcmp(argv[1], "-interface") == 0) {
+        interfaceAddress = argv[2];
+        int subnet_prefix = adapterCursor->FirstUnicastAddress->OnLinkPrefixLength; // Store the initial IP address for later use
+        if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
+            ARP_sweep_seq(interfaceAddress, subnet_prefix);
+        else if (argc == 5 && strcmp(argv[3], "-arp-sweep") == 0 && strcmp(argv[4], "-mt") == 0)
+            ARP_sweep(interfaceAddress, subnet_prefix);
+    } else printf("Invalid command or option. Use -h or --help for usage information.\n");
+
 
     free(adapterAddresses);
     WSACleanup();
