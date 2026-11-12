@@ -91,7 +91,6 @@ void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
 
 void ARP_sweep(const char *srcIP, int subnet_prefix) {
     IPAddr src;
-    IPAddr start_ip;
     char ipStr[INET_ADDRSTRLEN];
     unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
     IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
