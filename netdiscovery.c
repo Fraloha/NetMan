@@ -11,7 +11,7 @@
 #define THREAD_WORKERS 32
 #define MAX_HOST_SUBNET 256
 #define OFFSET i + batch
-
+ 
 typedef struct {
     IPAddr target;
     IPAddr src;
@@ -194,26 +194,16 @@ int main(int argc, char *argv[]) {
 
     if(argc <= 2) {
         if(argc == 1)   print_help();
-        if (strcmp("-help", argv[2]) == 0)  print_help();
-    } else if(argc <= 4) {
-        if (strcmp("-interface", argv[2]) == 0) {
+        if (strcmp("-help", argv[1]) == 0)  print_help();
+        else if (strcmp("-showinterface", argv[1]) == 0) show_info(adapterCursor);
+    } else if(argc <= 5) {
+        if (strcmp("-interface", argv[1]) == 0) {
             const char *interfaceAddress = argv[2];
+            if (strcmp("-arpsweep", argv[4]) == 0)  ARP_sweep_seq(interfaceAddress);
+            else if (strcmp("-mt", argv[5]) == 0 || strcmp("-multi-threaded", argv[5]) == 0)    ARP_sweep(interfaceAddress);
         } else
             printf("[ERROR] Unknown command.\n");
     }
-    
-    
-    else if(strcmp("-interface", argv[1]) == 0) {
-        const char *interfaceAddress = argv[2];
-
-        if (argc < 3 && strcmp("-arpsweep", argv[3]) == 0) {
-            if (argc < 3)   ARP_sweep_seq(interfaceAddress);
-            else if (strcmp("-mt", argv[4]) == 0 || strcmp("-multi-threaded", argv[4]) == 0)
-                ARP_sweep(interfaceAddress);
-        }
-
-    }else if (strcmp("-showinterface", argv[1]) == 0)  show_info(adapterCursor);
-    else                                                printf("It's not a command...");
 
     free(adapterAddresses);
     WSACleanup();
