@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <winsock2.h>
 #include <iphlpapi.h>
 #include <ws2tcpip.h>
@@ -54,7 +55,7 @@ DWORD WINAPI ArpSweepThread(LPVOID param) {
     ULONG length = MAC_ADDRESS_LENGTH;
     RECORD_NETWORK_DATA *data = (RECORD_NETWORK_DATA *)param;
 
-    int res = SendARP(data->target, data->src, data->mac, &length);
+    int res = SendARP(data->target, data->src, (PULONG)data->mac, &length);
 
     if (res == NO_ERROR)  data->found = TRUE;
     else data->found = FALSE;
@@ -71,7 +72,7 @@ void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
     IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
     unsigned int current_host = ntohl(start_ip);
 
-    uint64_t total_hosts = (1 << (32 - subnet_prefix)) - 2;
+    uint64_t total_hosts = (1ULL << (32 - subnet_prefix)) - 2;
     
     for(uint64_t i = 1; i <= total_hosts; i++) {
         IPAddr target = htonl(current_host + i);
@@ -92,12 +93,13 @@ void ARP_sweep_seq(const char *srcIP, int subnet_prefix) {
 void ARP_sweep(const char *srcIP, int subnet_prefix) {
     IPAddr src;
     char ipStr[INET_ADDRSTRLEN];
+
+    inet_pton(AF_INET, srcIP, &src);
     unsigned int subnet_mask = (0xFFFFFFFF << (32 - subnet_prefix)) & 0xFFFFFFFF;
     IPAddr start_ip = htonl(ntohl(src) & subnet_mask);
 
-    inet_pton(AF_INET, srcIP, &src);
     unsigned int current_host = ntohl(start_ip);
-    uint64_t total_hosts = (1 << (32 - subnet_prefix)) - 2;
+    uint64_t total_hosts = (1ULL << (32 - subnet_prefix)) - 2;
 
     uint64_t thread_workers = 0;
 
@@ -107,6 +109,8 @@ void ARP_sweep(const char *srcIP, int subnet_prefix) {
     for(uint64_t batch = 1; batch <= total_hosts; batch+=thread_workers) {
         HANDLE *t = calloc(thread_workers, sizeof(HANDLE));
         for(uint64_t i = 0; i < thread_workers; i++) {
+            if (OFFSET > total_hosts) break;
+
             IPAddr target = htonl(current_host + OFFSET);
 
             info[OFFSET].src = src;
@@ -116,7 +120,7 @@ void ARP_sweep(const char *srcIP, int subnet_prefix) {
         }
 
         //Closing all the threads.
-        for(int i = 0; i < thread_workers; i++) {
+        for(uint64_t i = 0; i < thread_workers; i++) {
 
             if (t[i] == NULL)  continue;
 
@@ -130,6 +134,7 @@ void ARP_sweep(const char *srcIP, int subnet_prefix) {
                 printf("\n");
             }
         }
+        free(t);
     }
 }
 
@@ -142,7 +147,7 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
 
         
         PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapter->FirstUnicastAddress;
-        if (addressCursor != NULL) //Skipping 0.0.0.0 address. addressCursor = addressCursor->Next;
+        //if (addressCursor != NULL) addressCursor = addressCursor->Next; //Skipping 0.0.0.0 address.
 
         printf("IP address: ");
         while (addressCursor != NULL) {
@@ -179,7 +184,6 @@ int main(int argc, char *argv[]) {
     IP_ADAPTER_ADDRESSES *adapterAddresses = NULL;
     IP_ADAPTER_ADDRESSES *adapterCursor = NULL;
     ULONG outBufLen = 15000; // Initial buffer size for adapter information.
-    BOOL test = FALSE;
     const char *interfaceAddress = NULL;
 
     WSADATA wsaData;
