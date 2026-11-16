@@ -147,7 +147,7 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
 
         
         PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapter->FirstUnicastAddress;
-        //if (addressCursor != NULL) addressCursor = addressCursor->Next; //Skipping 0.0.0.0 address.
+        if (addressCursor != NULL) addressCursor = addressCursor->Next; //Skipping 0.0.0.0 address.
 
         printf("IP address: ");
         while (addressCursor != NULL) {
@@ -216,7 +216,36 @@ int main(int argc, char *argv[]) {
     else if (argc == 2 && strcmp(argv[1], "-show-interfaces") == 0) show_info(adapterCursor);
     else if (argc >= 3 && strcmp(argv[1], "-interface") == 0) {
         interfaceAddress = argv[2];
-        int subnet_prefix = adapterCursor->FirstUnicastAddress->OnLinkPrefixLength; // Store the initial IP address for later use
+        char IPV4[16];
+        int subnet_prefix = 0;
+
+        //Zeroing the IPV4 buffer array
+        memset(IPV4, 0, 16 * sizeof(char));
+
+        while (adapterCursor != NULL) {
+
+            PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapterCursor->FirstUnicastAddress;
+            if (addressCursor != NULL) 
+                addressCursor = addressCursor->Next; //Skipping 0.0.0.0 address.
+            else {
+                subnet_prefix = -1;
+                break;
+            }
+            
+            while (addressCursor != NULL) {
+                struct sockaddr_in *sa_in = (struct sockaddr_in *) addressCursor->Address.lpSockaddr;
+                inet_ntop(AF_INET, &sa_in->sin_addr, IPV4, 16);
+                if (strcmp(IPV4, interfaceAddress) != 0) {
+                    subnet_prefix = addressCursor->OnLinkPrefixLength;
+                    break;
+                }
+                //Next address
+                addressCursor = addressCursor->Next;
+            }
+            //next adapter
+            adapterCursor = adapterCursor->Next;
+        }
+
         if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
             ARP_sweep_seq(interfaceAddress, subnet_prefix);
         else if (argc == 5 && strcmp(argv[3], "-arp-sweep") == 0 && strcmp(argv[4], "-mt") == 0)
