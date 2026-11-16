@@ -210,8 +210,12 @@ int main(int argc, char *argv[]) {
 
         if (adapterErrorCode == ERROR_BUFFER_OVERFLOW){
             adapterAddresses = (IP_ADAPTER_ADDRESSES *) realloc(adapterAddresses, outBufLen);
-        } else {
+        }
+        
+        if (adapterErrorCode != ERROR_SUCCESS && adapterErrorCode != ERROR_BUFFER_OVERFLOW) {
             printf("An error occured!\nAdapter error code : %ld\nTerminating the process...", adapterErrorCode);
+            free(adapterAddresses);
+            WSACleanup();
             return -1;
         }
 
