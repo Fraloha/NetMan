@@ -152,6 +152,10 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
         printf("IP address: ");
         while (addressCursor != NULL) {
             struct sockaddr_in *sa_in = (struct sockaddr_in *) addressCursor->Address.lpSockaddr;
+
+            if (sa_in->sin_family != AF_INET)
+                continue;
+
             inet_ntop(AF_INET, &sa_in->sin_addr, IPV4, 16);
             printf("%s\n", IPV4);
             addressCursor = addressCursor->Next;
@@ -235,18 +239,22 @@ int main(int argc, char *argv[]) {
             while (addressCursor != NULL) {
                 struct sockaddr_in *sa_in = (struct sockaddr_in *) addressCursor->Address.lpSockaddr;
                 inet_ntop(AF_INET, &sa_in->sin_addr, IPV4, 16);
-                if (strcmp(IPV4, interfaceAddress) != 0) {
+                if (strcmp(IPV4, interfaceAddress) == 0) {
                     subnet_prefix = addressCursor->OnLinkPrefixLength;
                     break;
                 }
                 //Next address
                 addressCursor = addressCursor->Next;
             }
-            //next adapter
-            adapterCursor = adapterCursor->Next;
+
+            if (subnet_prefix != -1)
+                break;
+            else adapterCursor = adapterCursor->Next; // next adapter
         }
 
-        if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
+        if (subnet_prefix == -1)
+            printf("An adapter with this address does not exist in the current computer.\n\n");
+        else if (argc == 4 && strcmp(argv[3], "-arp-sweep") == 0)
             ARP_sweep_seq(interfaceAddress, subnet_prefix);
         else if (argc == 5 && strcmp(argv[3], "-arp-sweep") == 0 && strcmp(argv[4], "-mt") == 0)
             ARP_sweep(interfaceAddress, subnet_prefix);
