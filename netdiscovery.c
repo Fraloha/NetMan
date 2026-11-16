@@ -153,11 +153,11 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
         while (addressCursor != NULL) {
             struct sockaddr_in *sa_in = (struct sockaddr_in *) addressCursor->Address.lpSockaddr;
 
-            if (sa_in->sin_family != AF_INET)
-                continue;
-
-            inet_ntop(AF_INET, &sa_in->sin_addr, IPV4, 16);
-            printf("%s\n", IPV4);
+            if (sa_in->sin_family == AF_INET) {
+                inet_ntop(AF_INET, &sa_in->sin_addr, IPV4, 16);
+                printf("%s\n", IPV4);
+            }
+            
             addressCursor = addressCursor->Next;
         }
 
@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
     else if (argc >= 3 && strcmp(argv[1], "-interface") == 0) {
         interfaceAddress = argv[2];
         char IPV4[16];
-        int subnet_prefix = 0;
+        int subnet_prefix = -1;
 
         //Zeroing the IPV4 buffer array
         memset(IPV4, 0, 16 * sizeof(char));
@@ -231,10 +231,7 @@ int main(int argc, char *argv[]) {
             PIP_ADAPTER_UNICAST_ADDRESS addressCursor = adapterCursor->FirstUnicastAddress;
             if (addressCursor != NULL) 
                 addressCursor = addressCursor->Next; //Skipping 0.0.0.0 address.
-            else {
-                subnet_prefix = -1;
-                break;
-            }
+            else break;
             
             while (addressCursor != NULL) {
                 struct sockaddr_in *sa_in = (struct sockaddr_in *) addressCursor->Address.lpSockaddr;
@@ -249,7 +246,7 @@ int main(int argc, char *argv[]) {
 
             if (subnet_prefix != -1)
                 break;
-            else adapterCursor = adapterCursor->Next; // next adapter
+            adapterCursor = adapterCursor->Next;
         }
 
         if (subnet_prefix == -1)
