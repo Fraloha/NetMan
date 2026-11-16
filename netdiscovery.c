@@ -157,7 +157,7 @@ void show_info(IP_ADAPTER_ADDRESSES *adapter) {
                 inet_ntop(AF_INET, &sa_in->sin_addr, IPV4, 16);
                 printf("%s\n", IPV4);
             }
-            
+
             addressCursor = addressCursor->Next;
         }
 
@@ -210,6 +210,9 @@ int main(int argc, char *argv[]) {
 
         if (adapterErrorCode == ERROR_BUFFER_OVERFLOW){
             adapterAddresses = (IP_ADAPTER_ADDRESSES *) realloc(adapterAddresses, outBufLen);
+        } else {
+            printf("An error occured!\nAdapter error code : %ld\nTerminating the process...", adapterErrorCode);
+            return -1;
         }
 
     } while (adapterErrorCode != ERROR_SUCCESS);
