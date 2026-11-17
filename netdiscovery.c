@@ -188,12 +188,13 @@ short int *create_DNS_packet();
 size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     //DNS query
     unsigned short int header[6];
-    char *host_name = malloc(sizeof(char) * 30);
+    char host_name[30] = "arpa.in-addr.";
+    char IP[16];
 
     //Creating the QNAME
     struct sockaddr_in *sa_in = (struct sockaddr_in *)address;
-    inet_ntop(AF_INET, &sa_in->sin_addr, host_name, 30);
-    strcat(host_name, ".in-addr.arpa");
+    inet_ntop(AF_INET, &sa_in->sin_addr, IP, 16);
+    strcat(host_name, IP);
 
     //Building it up
     header[0] = htons(100);         //ID
@@ -204,7 +205,21 @@ size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     header[5] = htons(0);           //ARCOUNT
 
     //Building the question section up.
-    
+    char *tokens = strtok(host_name, '.');
+    uint8_t *data = calloc(strlen(host_name), sizeof(uint8_t));
+    unsigned int offset = 0;
+
+    while (tokens != NULL) {
+        unsigned int i = 0;
+
+        data[offset] = (uint8_t) strlen(tokens);
+        for (i = 0; i < data[offset]; i++) {
+            data[offset + i] = (uint8_t) tokens[i];
+        }
+        offset += i;
+        strtok(NULL, ".");
+    }
+    data[offset + 1] = 0;
 }
 
 int main(int argc, char *argv[]) {
