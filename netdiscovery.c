@@ -183,7 +183,21 @@ void print_help() {
     printf("  -mt                       Use multi-threading for ARP sweep (optional)\n");
 }
 
+short int *create_DNS_packet();
+
 size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
+    //DNS query
+    unsigned short int header[6];
+
+    //Building it up
+    header[0] = htons(100);         //ID
+    header[1] = htons(1 << 8);      //Flags
+    header[2] = htons(1);           //QDCOUNT
+    header[3] = htons(0);           //ANCOUNT
+    header[4] = htons(0);           //NSCOUNT
+    header[5] = htons(0);           //ARCOUNT
+
+    //Building the question section up.
     
 }
 
