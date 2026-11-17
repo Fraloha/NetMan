@@ -188,6 +188,12 @@ short int *create_DNS_packet();
 size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     //DNS query
     unsigned short int header[6];
+    char *host_name = malloc(sizeof(char) * 30);
+
+    //Creating the QNAME
+    struct sockaddr_in *sa_in = (struct sockaddr_in *)address;
+    inet_ntop(AF_INET, &sa_in->sin_addr, host_name, 30);
+    strcat(host_name, ".in-addr.arpa");
 
     //Building it up
     header[0] = htons(100);         //ID
