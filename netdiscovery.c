@@ -183,6 +183,10 @@ void print_help() {
     printf("  -mt                       Use multi-threading for ARP sweep (optional)\n");
 }
 
+size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
+    
+}
+
 int main(int argc, char *argv[]) {
     
     IP_ADAPTER_ADDRESSES *adapterAddresses = NULL;
