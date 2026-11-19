@@ -196,6 +196,9 @@ size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     inet_ntop(AF_INET, &sa_in->sin_addr, IP, 16);
     strcat(host_name, IP);
 
+    //Reversing the string.
+    
+
     //Building it up
     header[0] = htons(100);         //ID
     header[1] = htons(1 << 8);      //Flags
@@ -204,10 +207,10 @@ size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     header[4] = htons(0);           //NSCOUNT
     header[5] = htons(0);           //ARCOUNT
 
-    //Building the question section up.
-    char *tokens = strtok(host_name, '.');
-    uint8_t *data = calloc(strlen(host_name), sizeof(uint8_t));
+    //Building the QNAME.
     unsigned int offset = 0;
+    char *tokens = strtok(host_name, ".");
+    uint8_t *data = calloc(strlen(host_name), sizeof(uint8_t));
 
     while (tokens != NULL) {
         unsigned int i = 0;
@@ -217,9 +220,13 @@ size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
             data[offset + i] = (uint8_t) tokens[i];
         }
         offset += i;
-        strtok(NULL, ".");
+        tokens = strtok(NULL, ".");
     }
     data[offset + 1] = 0;
+
+    //Building the QTYPE e QCLASS.
+    short int q_type = htons(12);
+    short int q_class = htons(1);
 }
 
 int main(int argc, char *argv[]) {
