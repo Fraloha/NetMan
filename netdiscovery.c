@@ -185,6 +185,16 @@ void print_help() {
 
 short int *create_DNS_packet();
 
+void reverse(char s[], size_t len) {
+    if (len < 2) return;
+
+    for (size_t i = 0; i < len / 2; i++) {
+        char tmp = s[i];
+        s[i] = s[len - 1 - i];
+        s[len - 1 - i] = tmp;
+    }
+}
+
 size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     //DNS query
     unsigned short int header[6];
@@ -192,12 +202,11 @@ size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     char IP[16];
 
     //Creating the QNAME
-    struct sockaddr_in *sa_in = (struct sockaddr_in *)address;
-    inet_ntop(AF_INET, &sa_in->sin_addr, IP, 16);
+    inet_ntop(AF_INET, &address, IP, 16);
     strcat(host_name, IP);
 
     //Reversing the string.
-    
+    reverse(host_name, 30);
 
     //Building it up
     header[0] = htons(100);         //ID
@@ -227,6 +236,15 @@ size_t reverse_DNS(IPAddr address, char *name_buffer, size_t buffer_len) {
     //Building the QTYPE e QCLASS.
     short int q_type = htons(12);
     short int q_class = htons(1);
+
+    //Temporary: remove these casts when the values get used.
+    (void) header;
+    (void) q_type;
+    (void) q_class;
+    (void) name_buffer;
+    (void) buffer_len;
+
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -301,6 +319,8 @@ int main(int argc, char *argv[]) {
                 break;
             adapterCursor = adapterCursor->Next;
         }
+        char buffer[30];
+        reverse_DNS(interfaceAddress, buffer, 30);
 
         if (subnet_prefix == -1)
             printf("An adapter with this address does not exist in the current computer.\n\n");
